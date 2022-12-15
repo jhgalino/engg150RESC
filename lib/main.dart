@@ -201,6 +201,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             if (val == null) {
                               setState(() {
                                 _floorAreaValid = false;
+                                _totalFloorArea = val;
                               });
                             } else {
                               setState(() {
@@ -236,6 +237,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             if (val == null) {
                               setState(() {
                                 _salValid = false;
+                                _smallApplianceLoad = val;
                               });
                             } else {
                               setState(() {
@@ -271,6 +273,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             if (val == null) {
                               setState(() {
                                 _llValid = false;
+                                _laundryLoad = val;
                               });
                             } else {
                               setState(() {
@@ -306,6 +309,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             if (val == null) {
                               setState(() {
                                 _blValid = false;
+                                _bathroomLoad = val;
                               });
                             } else {
                               setState(() {
