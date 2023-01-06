@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:resc/components/computedLoadResult.dart';
+import 'package:resc/invariants/invariants.dart';
 
 void main() {
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(const MyApp());
 }
 
@@ -13,16 +19,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'RESC',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.green,
+        primarySwatch: Invariants.navBarColor,
       ),
       home: const MyHomePage(title: 'RESC'),
     );
@@ -32,15 +29,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
@@ -49,7 +37,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _serviceVoltage = 230;
-  int? _totalFloorArea;
+  double? _totalFloorArea;
   int? _smallApplianceLoad;
   int? _laundryLoad;
   int? _bathroomLoad;
@@ -58,65 +46,6 @@ class _MyHomePageState extends State<MyHomePage> {
       _salValid = true,
       _llValid = true,
       _blValid = true;
-
-  // This widget shows the computed values
-  Widget computedDialog(int? floorArea, int? bcSAL, int? bcLL, int? bcBL) {
-    if (floorArea == null || bcSAL == null || bcLL == null || bcBL == null) {
-      return const SimpleDialog(
-        title: Center(
-          child: Text('Load Calculation Results'),
-        ),
-        children: <Widget>[Text('One or more inputs are invalid!')],
-      );
-    } else {
-      int glrcl = floorArea * 24;
-      int tSAL = bcSAL * 1500;
-      int tLL = bcLL * 1500;
-      int tBL = bcBL * 1500;
-      int TOT = glrcl + tSAL + tLL + tBL;
-      double ntl;
-
-      if (TOT >= 3000) {
-        ntl = 3000 + (TOT - 3000) * 0.35;
-      } else {
-        ntl = 3000 + (120000 - 3000) * 0.35 + (TOT - 120000) * 0.25;
-      }
-
-      ntl = ntl.roundToDouble();
-
-      return SimpleDialog(
-        title: const Center(
-          child: Text('Load Calculation Results'),
-        ),
-        children: <Widget>[
-          Column(
-            children: <Widget>[
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                        'General Lighting and Convenience Receptacle Load: $glrcl'),
-                  )
-                ],
-              ),
-              Row(
-                children: [Text('Total Small Appliance Load: $tSAL')],
-              ),
-              Row(
-                children: [
-                  Text('Total Laundry Load: $tLL'),
-                ],
-              ),
-              Row(children: [Text('Total Bathroom Load: $tBL')]),
-              Row(
-                children: [Text('Net Total Load: $ntl')],
-              )
-            ],
-          )
-        ],
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,13 +59,29 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Row(
+          children: <Widget>[
+            Icon(
+              Icons.lightbulb_rounded,
+              color: Invariants.yellow,
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('RESC'),
+                Text(
+                  'Residential Electrical Service Calculator',
+                  style: TextStyle(fontSize: Invariants.fontSizeSmall),
+                )
+              ],
+            )
+          ],
+        ),
         actions: <Widget>[
           // TODO: Add onSelected function
           PopupMenuButton(
             itemBuilder: (BuildContext context) => <PopupMenuEntry>[
-              const PopupMenuItem(
-                  child: Text('Reset Form')),
+              const PopupMenuItem(child: Text('Reset Form')),
               const PopupMenuItem(
                 child: Text('About RESC'),
               )
@@ -157,10 +102,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 children: <Widget>[
                   Row(
                     children: [
-                      const Text('Service Voltage'),
+                      const Text(
+                        'Service Voltage',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const Spacer(),
                       SizedBox(
-                        width: 200,
+                        width: Invariants.formWidth,
                         child: DropdownButton(
                           items: const <DropdownMenuItem<int>>[
                             DropdownMenuItem(value: 230, child: Text('230V')),
@@ -179,25 +127,38 @@ class _MyHomePageState extends State<MyHomePage> {
                       )
                     ],
                   ),
-                  const SizedBox(
-                    height: 20,
+                  SizedBox(
+                    height: Invariants.verticalSpacing,
                   ),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: const <Widget>[
-                      Text('General Lighting and Convenience Receptacle Load')
+                      Flexible(
+                        flex: 3,
+                        child: Text(
+                          'General Lighting and Convenience Receptacle Load',
+                          style: TextStyle(fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                      Spacer(
+                        flex: 2,
+                      )
+                      // SizedBox(child: Text('General Lighting and Convenience Receptacle Load'),)
                     ],
                   ),
                   // TODO: Add validation
                   Row(
                     children: [
-                      const Text('Total Floor Area (m\u00B2)'),
+                      const Text(
+                        'Total Floor Area (in m\u00B2)',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const Spacer(),
                       SizedBox(
-                        width: 200,
+                        width: Invariants.formWidth,
                         child: TextField(
                           onChanged: (String value) {
-                            int? val = int.tryParse(value);
+                            double? val = double.tryParse(value);
                             if (val == null) {
                               setState(() {
                                 _floorAreaValid = false;
@@ -211,26 +172,41 @@ class _MyHomePageState extends State<MyHomePage> {
                             }
                           },
                           decoration: InputDecoration(
+                            suffixText: "m\u00B2",
                               errorText: _floorAreaValid
                                   ? null
-                                  : 'Floor area must be an integer'),
+                                  : 'Must be an integer'),
                         ),
                       )
                     ],
                   ),
-                  const SizedBox(
-                    height: 20,
+                  SizedBox(
+                    height: Invariants.verticalSpacing,
                   ),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const <Widget>[Text('Small Appliance Load')],
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: const <Widget>[
+                      Flexible(
+                        flex: 3,
+                        child: Text(
+                          'Small Appliance Load',
+                          style: TextStyle(fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                      Spacer(
+                        flex: 2,
+                      )
+                    ],
                   ),
                   Row(
                     children: [
-                      const Text('Number of Branch Circuit'),
+                      const Text(
+                        'Number of Branch Circuits',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const Spacer(),
                       SizedBox(
-                        width: 180,
+                        width: Invariants.formWidth,
                         child: TextField(
                           onChanged: (String value) {
                             int? val = int.tryParse(value);
@@ -254,19 +230,33 @@ class _MyHomePageState extends State<MyHomePage> {
                       )
                     ],
                   ),
-                  const SizedBox(
-                    height: 20,
+                  SizedBox(
+                    height: Invariants.verticalSpacing,
                   ),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const <Widget>[Text('Laundry Load')],
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: const <Widget>[
+                      Flexible(
+                        flex: 3,
+                        child: Text(
+                          'Laundry Load',
+                          style: TextStyle(fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                      Spacer(
+                        flex: 2,
+                      )
+                    ],
                   ),
                   Row(
                     children: [
-                      const Text('Number of Branch Circuits'),
+                      const Text(
+                        'Number of Branch Circuits',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const Spacer(),
                       SizedBox(
-                        width: 180,
+                        width: Invariants.formWidth,
                         child: TextField(
                           onChanged: (String value) {
                             int? val = int.tryParse(value);
@@ -290,19 +280,33 @@ class _MyHomePageState extends State<MyHomePage> {
                       )
                     ],
                   ),
-                  const SizedBox(
-                    height: 20,
+                  SizedBox(
+                    height: Invariants.verticalSpacing,
                   ),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const <Widget>[Text('Bathroom Load')],
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: const <Widget>[
+                      Flexible(
+                        flex: 3,
+                        child: Text(
+                          'Bathroom Load',
+                          style: TextStyle(fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                      Spacer(
+                        flex: 2,
+                      )
+                    ],
                   ),
                   Row(
                     children: [
-                      const Text('Number of Branch Circuits'),
+                      const Text(
+                        'Number of Branch Circuits',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const Spacer(),
                       SizedBox(
-                        width: 180,
+                        width: Invariants.formWidth,
                         child: TextField(
                           onChanged: (String value) {
                             int? val = int.tryParse(value);
@@ -325,24 +329,46 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       )
                     ],
+                  ),
+                  SizedBox(
+                    height: Invariants.verticalSpacing,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                          onPressed: () {
+                            showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return CalcResult(
+                                    floorArea: _totalFloorArea,
+                                    bcSAL: _smallApplianceLoad,
+                                    bcLL: _laundryLoad,
+                                    bcBL: _bathroomLoad,
+                                    serviceVoltage: _serviceVoltage,
+                                  );
+                                });
+                          },
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Invariants.yellow,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 30.0, vertical: 15.0),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50.0))),
+                          child: Text(
+                            'SOLVE',
+                            style:
+                                TextStyle(fontSize: Invariants.fontSizeMedium),
+                          ))
+                    ],
                   )
                 ],
               ),
             )
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return computedDialog(_totalFloorArea, _smallApplianceLoad,
-                    _laundryLoad, _bathroomLoad);
-              });
-        },
-        backgroundColor: Colors.green,
-        child: const Text('Solve'),
       ),
     );
   }
