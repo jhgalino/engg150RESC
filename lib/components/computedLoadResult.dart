@@ -1,17 +1,19 @@
+import 'package:clipboard/clipboard.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 import 'package:resc/calculations/calc.dart';
 import 'package:resc/components/recommendations.dart';
 
 import '../invariants/invariants.dart';
 
 class CalcResult extends StatefulWidget {
-  double? floorArea;
-  int? bcSAL;
-  int? bcLL;
-  int? bcBL;
-  int serviceVoltage;
+  final double? floorArea;
+  final int? bcSAL;
+  final int? bcLL;
+  final int? bcBL;
+  final int serviceVoltage;
 
-  CalcResult(
+  const CalcResult(
       {this.floorArea,
       this.bcSAL,
       this.bcLL,
@@ -26,9 +28,7 @@ class CalcResult extends StatefulWidget {
 
 class _CalcResultState extends State<CalcResult> {
   double? _safetyFactor;
-  bool _safetyFactorValid = true;
-  String _conductorMaterial = "copper";
-  String _conductorType = "tw";
+  bool _safetyFactorValid = false;
 
   @override
   Widget build(BuildContext context) {
@@ -54,11 +54,20 @@ class _CalcResultState extends State<CalcResult> {
         contentPadding: const EdgeInsets.fromLTRB(5.0, 12.0, 0.0, 16.0),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-        children: const <Widget>[Text('One or more inputs are invalid!')],
+        children: const <Widget>[
+          Text(
+            'One or more inputs are invalid!',
+            textAlign: TextAlign.center,
+          )
+        ],
       );
     } else {
       double tncl = Calc.getTotalNetComputedLoad(floorArea, bcSAL, bcLL, bcBL);
       double iflc = Calc.getIFLC(tncl, serviceVoltage);
+      double glrcl = Calc.getGLRCL(floorArea);
+      double tSAL = Calc.getTotalSmallApplianceLoad(bcSAL);
+      double tLL = Calc.getTotalLaundryLoad(bcLL);
+      double tBL = Calc.getTotalBathroomLoad(bcBL);
 
       return SimpleDialog(
           title:
@@ -77,22 +86,29 @@ class _CalcResultState extends State<CalcResult> {
           children: <Widget>[
             Column(
               children: <Widget>[
-                const Text(
-                  "Your Total Net Computed Load is:",
-                  textAlign: TextAlign.center,
+                resultRow(
+                    "General Lighting and Convenience Receptacle Load", glrcl),
+                resultSpace(),
+                resultRow("Small Appliance Load", tSAL),
+                resultSpace(),
+                resultRow("Laundry Load", tLL),
+                resultSpace(),
+                resultRow("Bathroom Load", tBL),
+                resultSpace(),
+                resultRow("Subtotal", glrcl + tSAL + tLL + tBL),
+                const SizedBox(
+                  height: 5,
                 ),
-                Text(
-                  "$tncl VA",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                resultRow("Subtotal with Demand Factor",
+                    Calc.getTotalWithDemandFactor(glrcl + tSAL + tLL + tBL)),
+                resultSpace(),
+                resultRow("Total Net Computed Load", tncl,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(
+                  height: 5,
                 ),
-                const Text(
-                  "Your Full Load Current is:",
-                  textAlign: TextAlign.center,
-                ),
-                Text(
-                  "$iflc VA",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                resultRow("Full Load Current", iflc,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Divider(
                   height: 50.0,
                   thickness: 2.0,
@@ -108,7 +124,7 @@ class _CalcResultState extends State<CalcResult> {
                     ),
                     const Spacer(),
                     SizedBox(
-                      width: 100,
+                      width: 150,
                       child: TextField(
                         onChanged: (String value) {
                           double? val = double.tryParse(value);
@@ -125,54 +141,98 @@ class _CalcResultState extends State<CalcResult> {
                           }
                         },
                         decoration: InputDecoration(
-                          suffixText: "%",
+                            suffixText: "%",
                             errorText: _safetyFactorValid
                                 ? null
                                 : 'Must be an integer'),
-
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(
+                  height: 5,
+                ),
                 ElevatedButton(
                     onPressed: () {
-                      if (_safetyFactor != null) {
-                        double adjustedIFLC =
-                            Calc.getAdjustedIFLC(iflc, _safetyFactor!);
-                        double minDistanceForWire = 1e18;
-                        double minDistanceForITB = 1e18;
-                        double wireSize = 0;
-                        int itb = 0;
+                      FlutterClipboard.copy(
+                          "General Lighting and Convenience Receptacle Load: $glrcl\n"
+                          "Small Appliance Load: $tSAL\n"
+                          "Laundry Load: $tLL\n"
+                          "Bathroom Load: $tBL\n"
+                          "Subtotal: ${glrcl + tSAL + tLL + tBL}\n"
+                          "Subtotal with Demand Factor: ${Calc.getTotalWithDemandFactor(glrcl + tSAL + tLL + tBL)}\n"
+                          "Total Net Computed Load: $tncl\n"
+                          "Full Load Current: $iflc");
 
-                        Invariants.iflcToRecommendedSizeOfWires
-                            .forEach((key, value) {
-                          double distance = (adjustedIFLC - key).abs();
-                          if (distance <= minDistanceForWire) {
-                            minDistanceForWire = distance;
-                            wireSize = value;
-                          }
-                        });
-
-                        double inverseTB = tncl / serviceVoltage;
-                        for (var element in Invariants.mainProtectiveDevice) {
-                          double distance = (inverseTB - element).abs();
-                          if (distance <= minDistanceForITB) {
-                            minDistanceForITB = distance;
-                            itb = element;
-                          }
-                        }
-
-                        showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return Recommend(wireSize: wireSize, itb: itb);
-                            });
-                      }
+                      showToast("Copied to clipboard", context: context);
                     },
-                    child: const Text("Show Recommendations"))
+                    child: const Text("Copy to Clipboard")),
+                showRecommendationsButton(
+                    iflc: iflc, tncl: tncl, serviceVoltage: serviceVoltage)
               ],
             )
           ]);
     }
+  }
+
+  Widget resultRow(String name, double value, {TextStyle? style}) {
+    return Row(
+      children: [
+        Expanded(child: Text(name)),
+        Spacer(),
+        Text(
+          "$value VA",
+          style: style,
+        ),
+      ],
+    );
+  }
+
+  Widget resultSpace() {
+    return SizedBox(
+      height: Invariants.verticalSpacing,
+    );
+  }
+
+  Widget showRecommendationsButton(
+      {required double iflc,
+      required double tncl,
+      required int serviceVoltage}) {
+    return ElevatedButton(
+        onPressed: () {
+          if (_safetyFactor != null) {
+            double adjustedIFLC = Calc.getAdjustedIFLC(iflc, _safetyFactor!);
+            double minDistanceForWire = 1e18;
+            double minDistanceForITB = 1e18;
+            double wireSize = 0;
+            int itb = 0;
+
+            Invariants.iflcToRecommendedSizeOfWires.forEach((key, value) {
+              double distance = (adjustedIFLC - key).abs();
+              if (distance <= minDistanceForWire) {
+                minDistanceForWire = distance;
+                wireSize = value;
+              }
+            });
+
+            double inverseTB = tncl / serviceVoltage;
+            for (var element in Invariants.mainProtectiveDevice) {
+              double distance = (inverseTB - element).abs();
+              if (distance <= minDistanceForITB) {
+                minDistanceForITB = distance;
+                itb = element;
+              }
+            }
+
+            showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return Recommend(wireSize: wireSize, itb: itb);
+                });
+          } else {
+
+          }
+        },
+        child: const Text("Show Recommendations"));
   }
 }

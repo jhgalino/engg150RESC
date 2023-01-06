@@ -1,11 +1,13 @@
+import 'package:clipboard/clipboard.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 import 'package:resc/invariants/invariants.dart';
 
 class Recommend extends StatelessWidget {
   final double wireSize;
   final int itb;
 
-  Recommend({required this.wireSize, required this.itb, Key? key})
+  const Recommend({required this.wireSize, required this.itb, Key? key})
       : super(key: key);
 
   @override
@@ -21,7 +23,7 @@ class Recommend extends StatelessWidget {
         ],
       ),
       titlePadding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 5.0),
-      contentPadding: const EdgeInsets.fromLTRB(5.0, 12.0, 0.0, 16.0),
+      contentPadding: const EdgeInsets.fromLTRB(10.0, 12.0, 10.0, 16.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
       insetPadding: const EdgeInsets.only(left: 10.0, right: 10.0),
       children: <Widget>[
@@ -45,7 +47,18 @@ class Recommend extends StatelessWidget {
               ],
             )
           ],
-        )
+        ),
+        const SizedBox(
+          height: 5,
+        ),
+        ElevatedButton(
+            onPressed: () {
+              FlutterClipboard.copy("Recommended Feeder Size: $wireSize sq mm\n"
+                  "Recommended Protective Device: $itb AT Circuit Breaker");
+
+              showToast("Copied to clipboard", context: context);
+            },
+            child: const Text("Copy to Clipboard")),
       ],
     );
   }
